@@ -11,7 +11,6 @@ export default function Step5Form() {
         alert('제출 완료! (${visibility === "public" ? "공개" : "비공개"})');
     };
 
-
     return (
         <form
         onSubmit={handleSubmit}

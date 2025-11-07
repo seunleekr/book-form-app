@@ -1,20 +1,21 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
+import { useFormContext } from "react-hook-form";
 import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { firstErrorPath } from "@/lib/formUtils";
+import { FormValues } from "@/context/FormContext";
 
-// ✅ zod 스키마 (오타 수정 포함: step3RefinedSchema)
-const step3Schema = z.object({
+const step3Schema = z
+  .object({
   rating: z
     .number()
-    .min(0)
-    .max(5)
+    .min(0, "별점은 0점 이상이어야 합니다.")
+    .max(5, "별점은 5점 이하여야 합니다.")
     .refine((val) => val % 0.5 === 0, "별점은 0.5점 단위여야 합니다."),
   review: z.string().optional(),
-});
-
-const step3RefinedSchema = step3Schema.superRefine((data, ctx) => {
+})
+.superRefine((data, ctx) => {
   if ((data.rating === 1 || data.rating === 5) && (!data.review || data.review.length < 100)) {
     ctx.addIssue({
       code: "custom",
@@ -24,33 +25,77 @@ const step3RefinedSchema = step3Schema.superRefine((data, ctx) => {
   }
 });
 
-type Step3Values = z.infer<typeof step3RefinedSchema>;
-
 export default function Step3Form() {
+  const router = useRouter();
+
   const {
     register,
     handleSubmit,
-    setValue,
     watch,
+    setFocus,
+    setError,
     formState: { errors },
-  } = useForm<Step3Values>({
-    resolver: zodResolver(step3RefinedSchema),
-    defaultValues: {
-      rating: 0,
-      review: "",
-    },
-  });
+  } = useFormContext<FormValues>();
 
   const rating = watch("rating");
   const review = watch("review");
 
-  const onSubmit = (data: Step3Values) => {
-    console.log("Step3 제출 데이터:", data);
+  const onInvalid = () => {
+    const firstError = firstErrorPath(errors);
+    if (firstError) setFocus(firstError as any);
   };
+
+  const onSubmit = async (data: FormValues) => {
+    const step3Data = {
+      rating: data.rating,
+      review: data.review,
+    };
+    const result = step3Schema.safeParse(step3Data);
+    if (!result.success) {
+      const fieldErrors = result.error.flatten().fieldErrors;
+      Object.keys(fieldErrors).forEach((key) => {
+        const error = fieldErrors[key as keyof typeof fieldErrors];
+        if (error && error[0]) {
+          setError(key as any, {
+            type: "validation",
+            message: error[0],
+          });
+        }
+      });
+      
+      result.error.issues.forEach((issue) => {
+        if (issue.path.length > 0) {
+          const fieldPath = issue.path.join(".");
+          setError(fieldPath as any, {
+            type: "validation",
+            message: issue.message,
+          });
+        }
+      });
+      
+      const firstError = firstErrorPath(result.error.flatten().fieldErrors);
+      if (firstError) {
+        setFocus(firstError as any);
+      } else if (result.error.issues.length > 0) {
+        const firstIssue = result.error.issues[0];
+        if (firstIssue.path.length > 0) {
+          setFocus(firstIssue.path.join(".") as any);
+        }
+      }
+      return;
+    }
+    console.log("Step3 제출 데이터:", step3Data);
+    router.push("/form/step4");
+  };
+
+  const errorStyle = (field: "rating" | "review") => 
+    errors[field] 
+    ? { border: "1px solid red", outline: "none" } 
+    : { border: "1px solid #ccc"};
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)} // ✅ 반드시 추가
+      onSubmit={handleSubmit(onSubmit, onInvalid)}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -67,6 +112,7 @@ export default function Step3Form() {
           max="5"
           step="0.5"
           {...register("rating", { valueAsNumber: true })}
+          style={{ ...errorStyle("rating"), borderRadius: "8px"}}
         />
         {errors.rating && (
           <span style={{ color: "red", fontSize: "12px" }}>
@@ -78,10 +124,15 @@ export default function Step3Form() {
       <label style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         독후감 ({review?.length ?? 0}자)
         <textarea
-          rows={8}
+          rows={6}
           placeholder="이 책을 읽고 느낀 점을 자유롭게 작성해주세요."
           {...register("review")}
-          style={{ resize: "vertical", padding: "8px" }}
+          style={{ 
+            ...errorStyle("review"),
+            resize: "vertical", 
+            padding: "8px",
+            borderRadius: "6px",
+          }}
         />
         {errors.review && (
           <span style={{ color: "red", fontSize: "12px" }}>
@@ -90,7 +141,37 @@ export default function Step3Form() {
         )}
       </label>
 
-      <button type="submit">다음</button>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginTop: '16px',
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => router.push("/form/step2")}
+          style={{
+            background: '#f0f0f0',
+            border: "1px solid #ccc",
+            borderRadius: "6px",
+            padding: "8px 16px",
+            cursor: "pointer",
+          }}
+        >이전 단계로 이동
+        </button>
+
+        <button type="submit"
+        style={{
+          background: '#0070f3',
+          color: 'white',
+          border: "none",
+          padding: "8px 16px",
+          borderRadius: "6px",
+          cursor: "pointer",
+        }}
+        >다음 단계로 이동</button>
+      </div>
     </form>
   );
 }

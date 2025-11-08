@@ -31,19 +31,9 @@ const step4Schema = z
     quotes: z.array(quoteSchema).min(1, "인용구를 최소 1개 이상 입력해주세요."),
   })
   .superRefine((data, ctx) => {
-    data.quotes.forEach((quote, index) => {
-      if (quote.page && quote.page > data.totalPages) {
-        ctx.addIssue({
-          code: "custom",
-          message: "인용구 페이지 번호는 도서 전체 페이지 수보다 작아야 합니다.",
-          path: ["quotes", index, "page"],
-        });
-      }
-    });
-
     if (data.quotes.length > 1) {
       data.quotes.forEach((quote, index) => {
-        if (!quote.page) {
+        if (!quote.page || quote.page === undefined || quote.page === null) {
           ctx.addIssue({
             code: "custom",
             message: "두 개 이상의 인용구가 있을 경우 페이지 번호는 필수 입력 항목입니다.",
@@ -52,6 +42,34 @@ const step4Schema = z
         }
       });
     }
+
+    data.quotes.forEach((quote, index) => {
+      if (quote.page !== undefined && quote.page !== null) {
+        if (isNaN(quote.page)) {
+          ctx.addIssue({
+            code: "custom",
+            message: "페이지 번호는 숫자만 입력 가능합니다.",
+            path: ["quotes", index, "page"],
+          });
+        }
+        
+        if (quote.page < 1) {
+          ctx.addIssue({
+            code: "custom",
+            message: "페이지 번호는 1 이상이어야 합니다.",
+            path: ["quotes", index, "page"],
+          });
+        }
+        
+        if (quote.page >= data.totalPages) {
+          ctx.addIssue({
+            code: "custom",
+            message: "인용구 페이지 번호는 도서 전체 페이지 수보다 작아야 합니다.",
+            path: ["quotes", index, "page"],
+          });
+        }
+      }
+    });
   });
 
 export default function Step4Form() {
@@ -63,6 +81,7 @@ export default function Step4Form() {
     handleSubmit,
     setFocus,
     setError,
+    watch,
     formState: { errors },
   } = useFormContext<FormValues>();
 
@@ -70,6 +89,9 @@ export default function Step4Form() {
     control, 
     name: "quotes" 
   });
+
+  const totalPages = watch("totalPages");
+  const quotes = watch("quotes");
 
   const onInvalid = () => {
     const firstError = firstErrorPath(errors);
@@ -195,49 +217,66 @@ export default function Step4Form() {
             )}
           </label>
 
-          <label>
-            페이지 번호
-            <input
-              type="number"
-              {...register(`quotes.${index}.page` as const, {
-                valueAsNumber: true,
-                validate: (value) => {
-                  if (value === undefined || value === null) {
+          {quotes && quotes.length > 1 && (
+            <label>
+              페이지 번호 <span style={{ color: "red" }}>*</span>
+              <input
+                type="number"
+                {...register(`quotes.${index}.page` as const, {
+                  valueAsNumber: true,
+                  required: "페이지 번호를 입력해주세요.",
+                  validate: (value) => {
+                    if (value === undefined || value === null || isNaN(value)) {
+                      return "두 개 이상의 인용구가 있을 경우 페이지 번호는 필수 입력 항목입니다.";
+                    }
+                    
+                    if (!Number.isInteger(value)) {
+                      return "페이지 번호는 정수만 입력 가능합니다.";
+                    }
+                    
+                    if (value < 1) {
+                      return "페이지 번호는 1 이상이어야 합니다.";
+                    }
+                    
+                    if (totalPages && value >= totalPages) {
+                      return "인용구 페이지 번호는 도서 전체 페이지 수보다 작아야 합니다.";
+                    }
+                    
                     return true;
+                  },
+                })}
+                placeholder="예시: 125"
+                style={{
+                  ...errorStyle(errors.quotes?.[index]?.page ? "page" : ""),
+                  borderRadius: "6px",
+                  padding: "4px",
+                }}
+                onKeyDown={(e) => {
+                  if (
+                    e.key === "e" ||
+                    e.key === "E" ||
+                    e.key === "+" ||
+                    e.key === "-" ||
+                    e.key === "."
+                  ) {
+                    e.preventDefault();
                   }
-                  if (isNaN(value)) {
-                    return "페이지 번호는 숫자만 입력 가능합니다.";
+                }}
+                onInput={(e) => {
+                  const target = e.target as HTMLInputElement;
+                  const value = target.value;
+                  if (value && !/^\d+$/.test(value)) {
+                    target.value = value.replace(/[^\d]/g, "");
                   }
-                  if (!Number.isInteger(value)) {
-                    return "페이지 번호는 정수만 입력 가능합니다.";
-                  }
-                  return true;
-                },
-              })}
-              placeholder="예시: 125"
-              style={{
-                ...errorStyle(errors.quotes?.[index]?.page ? "page" : ""),
-                borderRadius: "6px",
-                padding: "4px",
-              }}
-              onKeyDown={(e) => {
-                if (
-                  e.key === "e" ||
-                  e.key === "E" ||
-                  e.key === "+" ||
-                  e.key === "-" ||
-                  e.key === "."
-                ) {
-                  e.preventDefault();
-                }
-              }}
-            />
-            {errors.quotes?.[index]?.page && (
-              <span style={{ color: "red", fontSize: "12px" }}>
-                {errors.quotes[index]?.page?.message}
-              </span>
-            )}
-          </label>
+                }}
+              />
+              {errors.quotes?.[index]?.page && (
+                <span style={{ color: "red", fontSize: "12px" }}>
+                  {errors.quotes[index]?.page?.message}
+                </span>
+              )}
+            </label>
+          )}
 
           {fields.length > 1 && (
             <button

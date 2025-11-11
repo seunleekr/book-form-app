@@ -31,7 +31,7 @@ export function AutoComplete({
   const listRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
-    if (!value) {
+    if (value == null) {
       setFilteredOptions(options);
       return;
     }
@@ -44,15 +44,15 @@ export function AutoComplete({
 
   useEffect(() => {
     if (highlightedIndex >= 0 && listRef.current) {
-      const item = listRef.current.children[highlightedIndex] as HTMLElement;
-      if (item) {
-        item.scrollIntoView({ block: "nearest" });
+      const highlightedListItem = listRef.current.children[highlightedIndex] as HTMLElement;
+      if (highlightedListItem) {
+        highlightedListItem.scrollIntoView({ block: "nearest" });
       }
     }
   }, [highlightedIndex]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = event.target.value;
     onChange?.(newValue);
     setIsOpen(true);
     setHighlightedIndex(-1);
@@ -65,27 +65,27 @@ export function AutoComplete({
     inputRef.current?.blur();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (!isOpen || filteredOptions.length === 0) {
-      if (e.key === "ArrowDown" || e.key === "Enter") {
+      if (event.key === "ArrowDown" || event.key === "Enter") {
         setIsOpen(true);
       }
       return;
     }
 
-    switch (e.key) {
+    switch (event.key) {
       case "ArrowDown":
-        e.preventDefault();
-        setHighlightedIndex((prev) =>
-          prev < filteredOptions.length - 1 ? prev + 1 : prev
+        event.preventDefault();
+        setHighlightedIndex((previousIndex) =>
+          previousIndex < filteredOptions.length - 1 ? previousIndex + 1 : previousIndex
         );
         break;
       case "ArrowUp":
-        e.preventDefault();
-        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+        event.preventDefault();
+        setHighlightedIndex((previousIndex) => (previousIndex > 0 ? previousIndex - 1 : -1));
         break;
       case "Enter":
-        e.preventDefault();
+        event.preventDefault();
         if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
           handleSelect(filteredOptions[highlightedIndex]);
         }
@@ -101,13 +101,11 @@ export function AutoComplete({
     setIsOpen(true);
   };
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    setTimeout(() => {
-      if (!listRef.current?.contains(document.activeElement)) {
-        setIsOpen(false);
-        setHighlightedIndex(-1);
-      }
-    }, 200);
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    if (!listRef.current?.contains(event.relatedTarget as Node)) {
+      setIsOpen(false);
+      setHighlightedIndex(-1);
+    }
   };
 
   return (
@@ -148,6 +146,9 @@ export function AutoComplete({
             <li
               key={option.value}
               onClick={() => handleSelect(option)}
+              onMouseDown={(event) => {
+                event.preventDefault();
+              }}
               style={{
                 padding: "8px 12px",
                 cursor: "pointer",

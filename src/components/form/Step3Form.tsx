@@ -2,28 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useFormContext } from "react-hook-form";
-import { z } from "zod";
 import { firstErrorPath } from "@/lib/formUtils";
 import { FormValues } from "@/context/FormContext";
-
-const step3Schema = z
-  .object({
-  rating: z
-    .number()
-    .min(0, "별점은 0점 이상이어야 합니다.")
-    .max(5, "별점은 5점 이하여야 합니다.")
-    .refine((val) => val % 0.5 === 0, "별점은 0.5점 단위여야 합니다."),
-  review: z.string().optional(),
-})
-.superRefine((data, ctx) => {
-  if ((data.rating === 1 || data.rating === 5) && (!data.review || data.review.length < 100)) {
-    ctx.addIssue({
-      code: "custom",
-      message: "별점이 1점 또는 5점인 경우 독후감은 100자 이상이어야 합니다.",
-      path: ["review"],
-    });
-  }
-});
+import { step3Schema } from "@/lib/schemas/step3Schema";
 
 export default function Step3Form() {
   const router = useRouter();
@@ -45,12 +26,11 @@ export default function Step3Form() {
     if (firstError) setFocus(firstError as any);
   };
 
-  const onSubmit = async (data: FormValues) => {
-    const step3Data = {
+  const onSubmit = (data: FormValues) => {
+    const result = step3Schema.safeParse({
       rating: data.rating,
       review: data.review,
-    };
-    const result = step3Schema.safeParse(step3Data);
+    });
     if (!result.success) {
       const fieldErrors = result.error.flatten().fieldErrors;
       Object.keys(fieldErrors).forEach((key) => {
@@ -84,14 +64,13 @@ export default function Step3Form() {
       }
       return;
     }
-    console.log("Step3 제출 데이터:", step3Data);
     router.push("/form/step4");
   };
 
-  const errorStyle = (field: "rating" | "review") => 
-    errors[field] 
-    ? { border: "1px solid red", outline: "none" } 
-    : { border: "1px solid #ccc"};
+  const errorStyle = (field: "rating" | "review") =>
+    errors[field]
+      ? { border: "1px solid red", outline: "none" }
+      : { border: "1px solid #ccc" };
 
   return (
     <form
@@ -112,7 +91,7 @@ export default function Step3Form() {
           max="5"
           step="0.5"
           {...register("rating", { valueAsNumber: true })}
-          style={{ ...errorStyle("rating"), borderRadius: "8px"}}
+          style={{ ...errorStyle("rating"), borderRadius: "8px" }}
         />
         {errors.rating && (
           <span style={{ color: "red", fontSize: "12px" }}>
@@ -161,16 +140,19 @@ export default function Step3Form() {
         >이전 단계로 이동
         </button>
 
-        <button type="submit"
-        style={{
-          background: '#0070f3',
-          color: 'white',
-          border: "none",
-          padding: "8px 16px",
-          borderRadius: "6px",
-          cursor: "pointer",
-        }}
-        >다음 단계로 이동</button>
+        <button
+          type="submit"
+          style={{
+            background: '#0070f3',
+            color: 'white',
+            border: "none",
+            padding: "8px 16px",
+            borderRadius: "6px",
+            cursor: "pointer",
+          }}
+        >
+          다음 단계로 이동
+        </button>
       </div>
     </form>
   );

@@ -5,13 +5,44 @@ import { useFormContextData } from "@/context/FormContext";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useWindowWidth } from "@/hooks/useWindowW";
 import { FormValues } from "@/context/FormContext";
+import StarRating from "./StarRating";
+
+const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+        to_read: "읽고 싶은 책",
+        reading: "읽는 중",
+        finished: "읽음",
+        on_hold: "보류 중",
+    };
+    return labels[status] || "";
+};
+
+const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+        to_read: "#3b82f6",
+        reading: "#10b981",
+        finished: "#8b5cf6",
+        on_hold: "#f59e0b",
+    };
+    return colors[status] || "#6b7280";
+};
+
+const formatDate = (dateString?: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    });
+};
 
 export default function PreviewPane() {
     const [isMounted, setIsMounted] = useState(false);
     const { watch } = useFormContextData();
-    const live = watch();
-    const data = useDebouncedValue<FormValues>(live, 500);
-    const w = useWindowWidth();
+    const formValues = watch();
+    const debouncedFormValues = useDebouncedValue<FormValues>(formValues, 500);
+    const windowWidth = useWindowWidth();
 
     useEffect(() => {
         setIsMounted(true);
@@ -21,60 +52,7 @@ export default function PreviewPane() {
         return null;
     }
 
-    if (w < 1024) return null;
-
-    const getStatusLabel = (status: string) => {
-        const labels: Record<string, string> = {
-            to_read: "읽고 싶은 책",
-            reading: "읽는 중",
-            finished: "읽음",
-            on_hold: "보류 중",
-        };
-        return labels[status] || "";
-    };
-
-    const getStatusColor = (status: string) => {
-        const colors: Record<string, string> = {
-            to_read: "#3b82f6",
-            reading: "#10b981",
-            finished: "#8b5cf6",
-            on_hold: "#f59e0b",
-        };
-        return colors[status] || "#6b7280";
-    };
-
-    const formatDate = (dateString?: string) => {
-        if (!dateString) return "";
-        const date = new Date(dateString);
-        return date.toLocaleDateString("ko-KR", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-        });
-    };
-
-    const renderStars = (rating: number) => {
-        const fullStars = Math.floor(rating);
-        const hasHalfStar = rating % 1 >= 0.5;
-        const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-
-        return (
-            <div style={{ display: "flex", gap: "2px", alignItems: "center" }}>
-                {Array.from({ length: fullStars }).map((_, i) => (
-                    <span key={`full-${i}`} style={{ color: "#fbbf24", fontSize: "16px" }}>★</span>
-                ))}
-                {hasHalfStar && (
-                    <span style={{ color: "#fbbf24", fontSize: "16px" }}>☆</span>
-                )}
-                {Array.from({ length: emptyStars }).map((_, i) => (
-                    <span key={`empty-${i}`} style={{ color: "#d1d5db", fontSize: "16px" }}>★</span>
-                ))}
-                <span style={{ marginLeft: "4px", fontSize: "14px", color: "#6b7280" }}>
-                    {rating > 0 ? rating.toFixed(1) : "0.0"}
-                </span>
-            </div>
-        );
-    };
+    if (windowWidth < 1024) return null;
 
     return (
         <aside style={{ 
@@ -85,23 +63,13 @@ export default function PreviewPane() {
             background: "#ffffff",
             boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
         }}>
-            <div style={{ 
-                marginBottom: 12, 
-                fontSize: "14px", 
-                color: "#6b7280",
-                fontWeight: 500,
-            }}>
-                앱 미리보기 (500ms 딜레이)
-            </div>
-            
             <div style={{
                 background: "#f9fafb",
                 borderRadius: 12,
                 padding: 20,
                 border: "1px solid #e5e7eb",
             }}>
-                {/* 책 제목 및 저자 */}
-                {data.title && (
+                {debouncedFormValues.title && (
                     <div style={{ marginBottom: 16 }}>
                         <h2 style={{ 
                             fontSize: "20px", 
@@ -110,22 +78,21 @@ export default function PreviewPane() {
                             marginBottom: 4,
                             color: "#111827",
                         }}>
-                            {data.title}
+                            {debouncedFormValues.title}
                         </h2>
-                        {data.author && (
+                        {debouncedFormValues.author && (
                             <p style={{ 
                                 fontSize: "14px", 
                                 color: "#6b7280", 
                                 margin: 0,
                             }}>
-                                {data.author}
+                                {debouncedFormValues.author}
                             </p>
                         )}
                     </div>
                 )}
 
-                {/* 상태 배지 */}
-                {data.status && (
+                {debouncedFormValues.status && (
                     <div style={{ marginBottom: 12 }}>
                         <span style={{
                             display: "inline-block",
@@ -133,22 +100,20 @@ export default function PreviewPane() {
                             borderRadius: 12,
                             fontSize: "12px",
                             fontWeight: 600,
-                            background: getStatusColor(data.status),
+                            background: getStatusColor(debouncedFormValues.status),
                             color: "#ffffff",
                         }}>
-                            {getStatusLabel(data.status)}
+                            {getStatusLabel(debouncedFormValues.status)}
                         </span>
                     </div>
                 )}
 
-                {/* 별점 */}
-                {data.rating > 0 && (
+                {debouncedFormValues.rating > 0 && (
                     <div style={{ marginBottom: 16 }}>
-                        {renderStars(data.rating)}
+                        <StarRating rating={debouncedFormValues.rating} />
                     </div>
                 )}
 
-                {/* 날짜 정보 */}
                 <div style={{ 
                     marginBottom: 16, 
                     fontSize: "13px", 
@@ -157,25 +122,24 @@ export default function PreviewPane() {
                     flexDirection: "column",
                     gap: 4,
                 }}>
-                    {data.publishedDate && (
+                    {debouncedFormValues.publishedDate && (
                         <div>
-                            <strong>출판일:</strong> {formatDate(data.publishedDate)}
+                            <strong>출판일:</strong> {formatDate(debouncedFormValues.publishedDate)}
                         </div>
                     )}
-                    {data.startDate && (
+                    {debouncedFormValues.startDate && (
                         <div>
-                            <strong>시작일:</strong> {formatDate(data.startDate)}
+                            <strong>시작일:</strong> {formatDate(debouncedFormValues.startDate)}
                         </div>
                     )}
-                    {data.endDate && (
+                    {debouncedFormValues.endDate && (
                         <div>
-                            <strong>종료일:</strong> {formatDate(data.endDate)}
+                            <strong>종료일:</strong> {formatDate(debouncedFormValues.endDate)}
                         </div>
                     )}
                 </div>
 
-                {/* 추천 여부 */}
-                {data.recommended && (
+                {debouncedFormValues.recommended && (
                     <div style={{ 
                         marginBottom: 16,
                         padding: "8px 12px",
@@ -189,8 +153,7 @@ export default function PreviewPane() {
                     </div>
                 )}
 
-                {/* 리뷰 미리보기 */}
-                {data.review && (
+                {debouncedFormValues.review && (
                     <div style={{ marginBottom: 16 }}>
                         <div style={{ 
                             fontSize: "13px", 
@@ -211,13 +174,12 @@ export default function PreviewPane() {
                             borderRadius: 8,
                             border: "1px solid #e5e7eb",
                         }}>
-                            {data.review}
+                            {debouncedFormValues.review}
                         </div>
                     </div>
                 )}
 
-                {/* 인용구 */}
-                {data.quotes && data.quotes.length > 0 && data.quotes.some(q => q.text) && (
+                {debouncedFormValues.quotes && debouncedFormValues.quotes.length > 0 && debouncedFormValues.quotes.some(q => q.text) && (
                     <div style={{ marginBottom: 16 }}>
                         <div style={{ 
                             fontSize: "13px", 
@@ -225,10 +187,10 @@ export default function PreviewPane() {
                             color: "#374151",
                             marginBottom: 8,
                         }}>
-                            인용구 ({data.quotes.filter(q => q.text).length}개)
+                            인용구 ({debouncedFormValues.quotes.filter(q => q.text).length}개)
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            {data.quotes.filter(q => q.text).map((quote, index) => (
+                            {debouncedFormValues.quotes.filter(q => q.text).map((quote, index) => (
                                 <div key={index} style={{
                                     padding: 12,
                                     background: "#ffffff",
@@ -259,28 +221,26 @@ export default function PreviewPane() {
                     </div>
                 )}
 
-                {/* 총 페이지 수 */}
-                {data.totalPages && (
+                {debouncedFormValues.totalPages && (
                     <div style={{ 
                         fontSize: "13px", 
                         color: "#6b7280",
                         marginBottom: 12,
                     }}>
-                        <strong>총 페이지:</strong> {data.totalPages.toLocaleString()}페이지
+                        <strong>총 페이지:</strong> {debouncedFormValues.totalPages.toLocaleString()}페이지
                     </div>
                 )}
 
-                {/* 공개/비공개 */}
                 <div style={{
                     padding: "8px 12px",
-                    background: data.isPublic ? "#dbeafe" : "#f3f4f6",
+                    background: debouncedFormValues.isPublic ? "#dbeafe" : "#f3f4f6",
                     borderRadius: 8,
                     fontSize: "13px",
-                    color: data.isPublic ? "#1e40af" : "#6b7280",
+                    color: debouncedFormValues.isPublic ? "#1e40af" : "#6b7280",
                     fontWeight: 600,
                     textAlign: "center",
                 }}>
-                    {data.isPublic ? "🌐 공개" : "🔒 비공개"}
+                    {debouncedFormValues.isPublic ? "🌐 공개" : "🔒 비공개"}
                 </div>
             </div>
         </aside>

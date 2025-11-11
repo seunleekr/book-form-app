@@ -2,75 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useFormContext, useFieldArray, Controller } from "react-hook-form";
-import { z } from "zod";
 import { firstErrorPath } from "@/lib/formUtils";
 import { CommaSeparatedInput } from "./CommaSeparatedInput";
 import { FormValues } from "@/context/FormContext";
-
-
-const quoteSchema = z.object({
-  text: z.string().min(1, "인용구를 입력해주세요."),
-  page: z
-    .union([
-      z
-        .number({ message: "페이지 번호는 숫자만 입력 가능합니다." })
-        .min(1, "페이지 번호는 1 이상이어야 합니다.")
-        .int("페이지 번호는 정수만 입력 가능합니다."),
-      z.nan().refine(() => false, {
-        message: "페이지 번호는 숫자만 입력 가능합니다.",
-      }),
-    ])
-    .optional(),
-});
-
-const step4Schema = z
-  .object({
-    totalPages: z
-      .number({ message: "총 페이지 수는 숫자여야 합니다." })
-      .min(1, "총 페이지 수는 1 이상이어야 합니다."),
-    quotes: z.array(quoteSchema).min(1, "인용구를 최소 1개 이상 입력해주세요."),
-  })
-  .superRefine((data, ctx) => {
-    if (data.quotes.length > 1) {
-      data.quotes.forEach((quote, index) => {
-        if (!quote.page || quote.page === undefined || quote.page === null) {
-          ctx.addIssue({
-            code: "custom",
-            message: "두 개 이상의 인용구가 있을 경우 페이지 번호는 필수 입력 항목입니다.",
-            path: ["quotes", index, "page"],
-          });
-        }
-      });
-    }
-
-    data.quotes.forEach((quote, index) => {
-      if (quote.page !== undefined && quote.page !== null) {
-        if (isNaN(quote.page)) {
-          ctx.addIssue({
-            code: "custom",
-            message: "페이지 번호는 숫자만 입력 가능합니다.",
-            path: ["quotes", index, "page"],
-          });
-        }
-        
-        if (quote.page < 1) {
-          ctx.addIssue({
-            code: "custom",
-            message: "페이지 번호는 1 이상이어야 합니다.",
-            path: ["quotes", index, "page"],
-          });
-        }
-        
-        if (quote.page >= data.totalPages) {
-          ctx.addIssue({
-            code: "custom",
-            message: "인용구 페이지 번호는 도서 전체 페이지 수보다 작아야 합니다.",
-            path: ["quotes", index, "page"],
-          });
-        }
-      }
-    });
-  });
+import { step4Schema } from "@/lib/schemas/step4Schema";
 
 export default function Step4Form() {
   const router = useRouter();
@@ -98,12 +33,11 @@ export default function Step4Form() {
     if (firstError) setFocus(firstError as any);
   };
 
-  const onSubmit = async (data: FormValues) => {
-    const step4Data = {
+  const onSubmit = (data: FormValues) => {
+    const result = step4Schema.safeParse({
       totalPages: data.totalPages,
       quotes: data.quotes,
-    };
-    const result = step4Schema.safeParse(step4Data);
+    });
     if (!result.success) {
       const fieldErrors = result.error.flatten().fieldErrors;
       Object.keys(fieldErrors).forEach((key) => {
@@ -137,12 +71,14 @@ export default function Step4Form() {
       }
       return;
     }
-    console.log("Step4 제출 데이터:", step4Data);
     router.push("/form/step5");
   };
-  
-  const errorStyle = (path: string) => 
-    path ? { border: "1px solid red", outline: "none" } : { border: "1px solid #ccc"};
+
+  const errorStyle = (hasErr: boolean) => ({
+    border: "1px solid",
+    borderColor: hasErr ? "red" : "#ccc",
+    borderRadius: "6px",
+  });
 
   return (
     <form
@@ -155,8 +91,6 @@ export default function Step4Form() {
         marginTop: "20px",
       }}
     >
-      <h2>Step 4 — 인용구 입력</h2>
-
       <label style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
         도서 전체 페이지 수
         <Controller
@@ -171,7 +105,7 @@ export default function Step4Form() {
               ref={field.ref}
               placeholder="예: 300"
               style={{
-                ...errorStyle(errors.totalPages ? "totalPages" : ""),
+                ...errorStyle(!!errors.totalPages),
                 borderRadius: "6px",
                 padding: "4px",
               }}
@@ -206,8 +140,7 @@ export default function Step4Form() {
               style={{ 
                 width: "100%",
                 resize: "vertical",
-                borderRadius: "6px",
-                ...errorStyle(errors.quotes?.[index]?.text ? "text" : ""),
+                ...errorStyle(!!errors.quotes?.[index]?.text),
               }}
             />
             {errors.quotes?.[index]?.text && (
@@ -247,26 +180,26 @@ export default function Step4Form() {
                 })}
                 placeholder="예시: 125"
                 style={{
-                  ...errorStyle(errors.quotes?.[index]?.page ? "page" : ""),
+                  ...errorStyle(!!errors.quotes?.[index]?.page),
                   borderRadius: "6px",
                   padding: "4px",
                 }}
-                onKeyDown={(e) => {
+                onKeyDown={(event) => {
                   if (
-                    e.key === "e" ||
-                    e.key === "E" ||
-                    e.key === "+" ||
-                    e.key === "-" ||
-                    e.key === "."
+                    event.key === "e" ||
+                    event.key === "E" ||
+                    event.key === "+" ||
+                    event.key === "-" ||
+                    event.key === "."
                   ) {
-                    e.preventDefault();
+                    event.preventDefault();
                   }
                 }}
-                onInput={(e) => {
-                  const target = e.target as HTMLInputElement;
-                  const value = target.value;
-                  if (value && !/^\d+$/.test(value)) {
-                    target.value = value.replace(/[^\d]/g, "");
+                onInput={(event) => {
+                  const inputElement = event.target as HTMLInputElement;
+                  const inputValue = inputElement.value;
+                  if (inputValue && !/^\d+$/.test(inputValue)) {
+                    inputElement.value = inputValue.replace(/[^\d]/g, "");
                   }
                 }}
               />
@@ -327,19 +260,22 @@ export default function Step4Form() {
             borderRadius: '6px',
             cursor: 'pointer',
           }}
-        >이전 단계로 이동
+        >
+          이전 단계로 이동
         </button>
 
-      <button type="submit"
-      style={{
-        background: '#0070f3',
-        border: "none",
-        color: 'white',
-        padding: "8px 16px",
-        borderRadius: '6px',
-        cursor: 'pointer',
-      }}
-      >다음 단계로 이동
+        <button
+          type="submit"
+          style={{
+            background: '#0070f3',
+            border: "none",
+            color: 'white',
+            padding: "8px 16px",
+            borderRadius: '6px',
+            cursor: 'pointer',
+          }}
+        >
+          다음 단계로 이동
         </button>
       </div>
     </form>

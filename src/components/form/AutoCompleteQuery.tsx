@@ -1,12 +1,12 @@
 "use client";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery, QueryKey } from "@tanstack/react-query";
 import { AutoComplete, Option } from "./AutoComplete";
 import { InputHTMLAttributes } from "react";
 
 export interface AutoCompleteQueryProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "onSelect"> {
-  queryKey: string[];
+  queryKey: QueryKey;
   queryFn: () => Promise<Option[]>;
   value?: string;
   onChange?: (value: string) => void;
@@ -30,12 +30,12 @@ export function AutoCompleteQuery({
 
   return (
     <AutoComplete
+      {...props}
       options={options}
       value={value}
       onChange={onChange}
       onSelect={onSelect}
       placeholder={placeholder}
-      {...props}
     />
   );
 }

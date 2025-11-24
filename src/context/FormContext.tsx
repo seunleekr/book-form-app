@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect } from "react";
-import { useForm, FormProvider, UseFormReturn } from "react-hook-form";
+import { useForm, FormProvider, UseFormReturn, Resolver } from "react-hook-form";
 
 export type FormValues = {
     title: string;
@@ -30,7 +30,10 @@ export function FormProviderWrapper({ children }: { children: React.ReactNode })
         isPublic: false,
     };
     
-    const methods = useForm<FormValues>({ defaultValues: defaults, mode: "onChange" });
+    const methods = useForm<FormValues>({ 
+        defaultValues: defaults, 
+        mode: "onChange",
+    });
 
     useEffect(() => {
         const saved = typeof window !== "undefined" ? window.localStorage.getItem(KEY) : null;

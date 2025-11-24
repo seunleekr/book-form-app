@@ -2,19 +2,33 @@
 
 import { useRouter } from "next/navigation";
 import { useFormContext } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { firstErrorPath } from "@/lib/formUtils";
 import { FormValues } from "@/context/FormContext";
 import { step1Schema } from "@/lib/schemas/step1Schema";
+import { useEffect } from "react";
+import { useFormContextData } from "@/context/FormContext";
 
 export default function Step1Form() {
   const router = useRouter();
+  const formMethods = useFormContextData();
+
+  // resolver를 동적으로 설정
+  useEffect(() => {
+    // RHF의 내부 API를 사용하여 resolver를 동적으로 설정
+    // 이는 각 step마다 다른 schema를 사용하기 위한 임시 해결책입니다
+    // @ts-expect-error - RHF 내부 API
+    if (formMethods._options) {
+      // @ts-expect-error - RHF 내부 API
+      formMethods._options.resolver = zodResolver(step1Schema);
+    }
+  }, [formMethods]);
 
   const {
     register,
     handleSubmit,
     watch,
     setFocus,
-    setError,
     formState: { errors },
   } = useFormContext<FormValues>();
 
@@ -26,47 +40,6 @@ export default function Step1Form() {
   };
 
   const onSubmit = (data: FormValues) => {
-    const result = step1Schema.safeParse({
-      title: data.title,
-      author: data.author,
-      status: data.status,
-      publishedDate: data.publishedDate,
-      startDate: data.startDate,
-      endDate: data.endDate,
-    });
-    if (!result.success) {
-      const fieldErrors = result.error.flatten().fieldErrors;
-      Object.keys(fieldErrors).forEach((key) => {
-        const error = fieldErrors[key as keyof typeof fieldErrors];
-        if (error && error[0]) {
-          setError(key as any, {
-            type: "validation",
-            message: error[0],
-          });
-        }
-      });
-      
-      result.error.issues.forEach((issue) => {
-        if (issue.path.length > 0) {
-          const fieldPath = issue.path.join(".");
-          setError(fieldPath as any, {
-            type: "validation",
-            message: issue.message,
-          });
-        }
-      });
-      
-      const firstError = firstErrorPath(result.error.flatten().fieldErrors);
-      if (firstError) {
-        setFocus(firstError as any);
-      } else if (result.error.issues.length > 0) {
-        const firstIssue = result.error.issues[0];
-        if (firstIssue.path.length > 0) {
-          setFocus(firstIssue.path.join(".") as any);
-        }
-      }
-      return;
-    }
     router.push("/form/step2");
   };
 

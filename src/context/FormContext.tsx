@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext, useEffect, useCallback, useState } from "react";
 import { useForm, FormProvider, UseFormReturn, Resolver } from "react-hook-form";
 
 export type FormValues = {
@@ -21,6 +21,9 @@ export type FormValues = {
 const KEY = "multi-step-form:v1";
 
 const FormContext = createContext<UseFormReturn<FormValues> | null>(null);
+const ResolverContext = createContext<{
+    setResolver: (resolver: Resolver<FormValues> | undefined) => void;
+} | null>(null);
 
 export function FormProviderWrapper({ children }: { children: React.ReactNode }) {
     const defaults: FormValues = {
@@ -30,10 +33,17 @@ export function FormProviderWrapper({ children }: { children: React.ReactNode })
         isPublic: false,
     };
     
+    const [resolver, setResolverState] = useState<Resolver<FormValues> | undefined>(undefined);
+    
     const methods = useForm<FormValues>({ 
         defaultValues: defaults, 
         mode: "onChange",
+        resolver,
     });
+    
+    const setResolver = useCallback((newResolver: Resolver<FormValues> | undefined) => {
+        setResolverState(newResolver);
+    }, []);
 
     useEffect(() => {
         const saved = typeof window !== "undefined" ? window.localStorage.getItem(KEY) : null;
@@ -57,12 +67,20 @@ export function FormProviderWrapper({ children }: { children: React.ReactNode })
 
     return ( 
         <FormContext.Provider value={methods}>
-            <FormProvider {...methods}>{children}</FormProvider>
+            <ResolverContext.Provider value={{ setResolver }}>
+                <FormProvider {...methods}>{children}</FormProvider>
+            </ResolverContext.Provider>
         </FormContext.Provider>
     );
 }
 export function useFormContextData() {
     const ctx = useContext(FormContext);
     if (!ctx) { throw new Error("useFormContext must be used within a FormProviderWrapper");}
+    return ctx;
+}
+
+export function useResolverContext() {
+    const ctx = useContext(ResolverContext);
+    if (!ctx) { throw new Error("useResolverContext must be used within a FormProviderWrapper");}
     return ctx;
 }

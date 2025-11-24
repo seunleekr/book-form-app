@@ -51,4 +51,3 @@ export default async function StepPage({ params }: StepPageProps) {
     </main>
   );
 }
-

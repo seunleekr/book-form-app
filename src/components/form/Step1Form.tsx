@@ -4,25 +4,18 @@ import { useRouter } from "next/navigation";
 import { useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { firstErrorPath } from "@/lib/formUtils";
-import { FormValues } from "@/context/FormContext";
+import { FormValues, useResolverContext } from "@/context/FormContext";
 import { step1Schema } from "@/lib/schemas/step1Schema";
 import { useEffect } from "react";
-import { useFormContextData } from "@/context/FormContext";
 
 export default function Step1Form() {
   const router = useRouter();
-  const formMethods = useFormContextData();
+  const { setResolver } = useResolverContext();
 
-  // resolver를 동적으로 설정
   useEffect(() => {
-    // RHF의 내부 API를 사용하여 resolver를 동적으로 설정
-    // 이는 각 step마다 다른 schema를 사용하기 위한 임시 해결책입니다
-    // @ts-expect-error - RHF 내부 API
-    if (formMethods._options) {
-      // @ts-expect-error - RHF 내부 API
-      formMethods._options.resolver = zodResolver(step1Schema);
-    }
-  }, [formMethods]);
+    setResolver(zodResolver(step1Schema) as any);
+    return () => setResolver(undefined);
+  }, [setResolver]);
 
   const {
     register,

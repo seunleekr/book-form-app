@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useFormContext } from "react-hook-form";
-import { firstErrorPath } from "@/lib/formUtils";
 import { FormValues } from "@/context/FormContext";
 import { step3Schema } from "@/lib/schemas/step3Schema";
 
@@ -13,18 +12,12 @@ export default function Step3Form() {
     register,
     handleSubmit,
     watch,
-    setFocus,
     setError,
     formState: { errors },
   } = useFormContext<FormValues>();
 
   const rating = watch("rating");
   const review = watch("review");
-
-  const onInvalid = () => {
-    const firstError = firstErrorPath(errors);
-    if (firstError) setFocus(firstError as any);
-  };
 
   const onSubmit = (data: FormValues) => {
     const result = step3Schema.safeParse({
@@ -42,26 +35,6 @@ export default function Step3Form() {
           });
         }
       });
-      
-      result.error.issues.forEach((issue) => {
-        if (issue.path.length > 0) {
-          const fieldPath = issue.path.join(".");
-          setError(fieldPath as any, {
-            type: "validation",
-            message: issue.message,
-          });
-        }
-      });
-      
-      const firstError = firstErrorPath(result.error.flatten().fieldErrors);
-      if (firstError) {
-        setFocus(firstError as any);
-      } else if (result.error.issues.length > 0) {
-        const firstIssue = result.error.issues[0];
-        if (firstIssue.path.length > 0) {
-          setFocus(firstIssue.path.join(".") as any);
-        }
-      }
       return;
     }
     router.push("/form/step4");
@@ -74,7 +47,7 @@ export default function Step3Form() {
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit, onInvalid)}
+      onSubmit={handleSubmit(onSubmit)}
       style={{
         display: "flex",
         flexDirection: "column",

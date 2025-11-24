@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect } from "react";
-import { useForm, FormProvider, UseFormReturn } from "react-hook-form";
+import { useForm, FormProvider, UseFormReturn, Resolver } from "react-hook-form";
 
 export type FormValues = {
     title: string;
@@ -22,7 +22,7 @@ const KEY = "multi-step-form:v1";
 
 const FormContext = createContext<UseFormReturn<FormValues> | null>(null);
 
-export function FormProviderWrapper({ children }: { children: React.ReactNode }) {
+export function FormProviderWrapper({ children, resolver }: { children: React.ReactNode; resolver?: Resolver<FormValues> }) {
     const defaults: FormValues = {
         title: "", author: "", status: "", publishedDate: "", startDate: "", endDate: "", 
         recommended: false, rating: 0, review: "",
@@ -30,7 +30,12 @@ export function FormProviderWrapper({ children }: { children: React.ReactNode })
         isPublic: false,
     };
     
-    const methods = useForm<FormValues>({ defaultValues: defaults, mode: "onChange" });
+    const methods = useForm<FormValues>({ 
+        defaultValues: defaults, 
+        mode: "onChange",
+        shouldFocusError: true,
+        resolver,
+    });
 
     useEffect(() => {
         const saved = typeof window !== "undefined" ? window.localStorage.getItem(KEY) : null;

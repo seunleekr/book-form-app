@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useFormContext, useFieldArray, Controller } from "react-hook-form";
-import { firstErrorPath } from "@/lib/formUtils";
 import { CommaSeparatedInput } from "./CommaSeparatedInput";
 import { FormValues } from "@/context/FormContext";
 import { step4Schema } from "@/lib/schemas/step4Schema";
@@ -14,7 +13,6 @@ export default function Step4Form() {
     control,
     register,
     handleSubmit,
-    setFocus,
     setError,
     watch,
     formState: { errors },
@@ -27,11 +25,6 @@ export default function Step4Form() {
 
   const totalPages = watch("totalPages");
   const quotes = watch("quotes");
-
-  const onInvalid = () => {
-    const firstError = firstErrorPath(errors);
-    if (firstError) setFocus(firstError as any);
-  };
 
   const onSubmit = (data: FormValues) => {
     const result = step4Schema.safeParse({
@@ -49,26 +42,6 @@ export default function Step4Form() {
           });
         }
       });
-      
-      result.error.issues.forEach((issue) => {
-        if (issue.path.length > 0) {
-          const fieldPath = issue.path.join(".");
-          setError(fieldPath as any, {
-            type: "validation",
-            message: issue.message,
-          });
-        }
-      });
-      
-      const firstError = firstErrorPath(result.error.flatten().fieldErrors);
-      if (firstError) {
-        setFocus(firstError as any);
-      } else if (result.error.issues.length > 0) {
-        const firstIssue = result.error.issues[0];
-        if (firstIssue.path.length > 0) {
-          setFocus(firstIssue.path.join(".") as any);
-        }
-      }
       return;
     }
     router.push("/form/step5");
@@ -82,7 +55,7 @@ export default function Step4Form() {
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit, onInvalid)}
+      onSubmit={handleSubmit(onSubmit)}
       style={{
         display: "flex",
         flexDirection: "column",

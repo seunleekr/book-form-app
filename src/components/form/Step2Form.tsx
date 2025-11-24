@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useFormContext } from "react-hook-form";
-import { firstErrorPath } from "@/lib/formUtils";
 import { FormValues } from "@/context/FormContext";
 import { step2Schema } from "@/lib/schemas/step2Schema";
 
@@ -13,18 +12,12 @@ export default function Step2Form() {
     handleSubmit,
     watch,
     setValue,
-    setFocus,
     setError,
     formState: { errors },
   } = useFormContext<FormValues>();
 
   const rating = watch("rating");
   const recommended = watch("recommended");
-
-  const onInvalid = () => {
-    const firstError = firstErrorPath(errors);
-    if (firstError) setFocus(firstError as any);
-  };
 
   const onSubmit = (data: FormValues) => {
     const result = step2Schema.safeParse({
@@ -42,9 +35,6 @@ export default function Step2Form() {
           });
         }
       });
-      
-      const firstError = firstErrorPath(result.error.flatten().fieldErrors);
-      if (firstError) setFocus(firstError as any);
       return;
     }
     router.push("/form/step3");
@@ -59,7 +49,7 @@ export default function Step2Form() {
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit, onInvalid)}
+      onSubmit={handleSubmit(onSubmit)}
       style={{
         display: "flex",
         flexDirection: "column",

@@ -1,13 +1,22 @@
 import { z } from "zod";
+import { FormValues } from "@/context/FormContext";
 
 export const step1Schema = z
   .object({
     title: z.string().min(1, "도서 제목을 입력해주세요."),
     author: z.string().min(1, "도서 저자를 입력해주세요."),
-    status: z.string().min(1, "독서 상태를 선택해주세요."),
+    status: z.enum(["to_read", "reading", "finished", "on_hold", ""]).refine((val) => val !== "", {
+      message: "독서 상태를 선택해주세요.",
+    }),
     publishedDate: z.string().min(1, "도서 출판일을 입력해주세요."),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
+    recommended: z.boolean(),
+    rating: z.number(),
+    review: z.string().optional(),
+    quotes: z.array(z.object({ text: z.string(), page: z.number().optional() })),
+    totalPages: z.number(),
+    isPublic: z.boolean(),
   })
   .superRefine((data, ctx) => {
     const { status, startDate, endDate, publishedDate } = data;

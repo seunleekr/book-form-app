@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useFormContext } from "react-hook-form";
 import { FormValues } from "@/context/FormContext";
 import { step3Schema } from "@/lib/schemas/step3Schema";
+import { errorStyle } from "@/lib/utils/formStyles";
 
 export default function Step3Form() {
   const router = useRouter();
@@ -40,11 +41,6 @@ export default function Step3Form() {
     router.push("/form/step4");
   };
 
-  const errorStyle = (field: "rating" | "review") =>
-    errors[field]
-      ? { border: "1px solid red", outline: "none" }
-      : { border: "1px solid #ccc" };
-
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
@@ -64,7 +60,7 @@ export default function Step3Form() {
           max="5"
           step="0.5"
           {...register("rating", { valueAsNumber: true })}
-          style={{ ...errorStyle("rating"), borderRadius: "8px" }}
+          style={{ ...errorStyle(!!errors.rating), borderRadius: "8px" }}
         />
         {errors.rating && (
           <span style={{ color: "red", fontSize: "12px" }}>
@@ -79,9 +75,9 @@ export default function Step3Form() {
           rows={6}
           placeholder="이 책을 읽고 느낀 점을 자유롭게 작성해주세요."
           {...register("review")}
-          style={{ 
-            ...errorStyle("review"),
-            resize: "vertical", 
+          style={{
+            ...errorStyle(!!errors.review),
+            resize: "vertical",
             padding: "8px",
             borderRadius: "6px",
           }}

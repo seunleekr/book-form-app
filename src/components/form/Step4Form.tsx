@@ -5,6 +5,7 @@ import { useFormContext, useFieldArray, Controller } from "react-hook-form";
 import { CommaSeparatedInput } from "./CommaSeparatedInput";
 import { FormValues } from "@/context/FormContext";
 import { step4Schema } from "@/lib/schemas/step4Schema";
+import { errorStyle } from "@/lib/utils/formStyles";
 
 export default function Step4Form() {
   const router = useRouter();
@@ -46,12 +47,6 @@ export default function Step4Form() {
     }
     router.push("/form/step5");
   };
-
-  const errorStyle = (hasErr: boolean) => ({
-    border: "1px solid",
-    borderColor: hasErr ? "red" : "#ccc",
-    borderRadius: "6px",
-  });
 
   return (
     <form

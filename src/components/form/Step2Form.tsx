@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useFormContext } from "react-hook-form";
 import { FormValues } from "@/context/FormContext";
 import { step2Schema } from "@/lib/schemas/step2Schema";
+import { errorStyle } from "@/lib/utils/formStyles";
 
 export default function Step2Form() {
   const router = useRouter();
@@ -39,13 +40,6 @@ export default function Step2Form() {
     }
     router.push("/form/step3");
   };
-
-  const errorStyle = (hasErr: boolean) => ({
-    border: "1px solid",
-    borderColor: hasErr ? "red" : "#ccc",
-    borderRadius: "6px",
-    padding: "8px",
-  });
 
   return (
     <form

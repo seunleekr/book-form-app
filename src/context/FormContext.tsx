@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext } from "react";
 import { useForm, FormProvider, UseFormReturn, Resolver } from "react-hook-form";
+import { useFormLocalStorageSync } from "@/hooks/useFormLocalStorage";
 
 export type FormValues = {
     title: string;
@@ -24,40 +25,23 @@ const FormContext = createContext<UseFormReturn<FormValues> | null>(null);
 
 export function FormProviderWrapper({ children, resolver }: { children: React.ReactNode; resolver?: Resolver<FormValues> }) {
     const defaults: FormValues = {
-        title: "", author: "", status: "", publishedDate: "", startDate: "", endDate: "", 
+        title: "", author: "", status: "", publishedDate: "", startDate: "", endDate: "",
         recommended: false, rating: 0, review: "",
-        quotes: [{ text: "", page: 1 }], totalPages: 300, 
+        quotes: [{ text: "", page: 1 }], totalPages: 300,
         isPublic: false,
     };
-    
-    const methods = useForm<FormValues>({ 
-        defaultValues: defaults, 
+
+    const methods = useForm<FormValues>({
+        defaultValues: defaults,
         mode: "onChange",
         shouldFocusError: true,
         resolver,
     });
 
-    useEffect(() => {
-        const saved = typeof window !== "undefined" ? window.localStorage.getItem(KEY) : null;
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                Object.keys(parsed).forEach((key) => {
-                    methods.setValue(key as keyof FormValues, parsed[key], { shouldValidate: false });
-                });
-            } catch (e) {
-            }
-        }
-    }, [methods]);
+    // localStorage 동기화 책임을 훅에 위임
+    useFormLocalStorageSync(methods, KEY);
 
-    useEffect(() => {
-        const sub = methods.watch((v) => {
-            try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {}
-        });
-        return () => sub.unsubscribe();
-    }, [methods]);
-
-    return ( 
+    return (
         <FormContext.Provider value={methods}>
             <FormProvider {...methods}>{children}</FormProvider>
         </FormContext.Provider>
